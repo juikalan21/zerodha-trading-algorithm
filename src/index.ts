@@ -123,7 +123,7 @@ app.get("/balance/:userId", (req, res) => {
   }
   res.json({ balances: user.balances }); //return the balance of user
 })
-
+//quote - how much will it cost to buy/sell a certain quantity of stock - this is the price that the user will see when they place an order
 app.get("/quote", (req, res) => {
   const side = req.body.side;
   const quantity = req.body.quantity;
@@ -165,10 +165,11 @@ function flipBalance(userId1: string, userId2: string, quantity: number, price: 
   if (!user1 || !user2) {
     return;
   }
-  user1.balances[TICKER] -= quantity;
-  user2.balances[TICKER] += quantity;
-  user1.balances["USD"] += (quantity * price);
-  user2.balances["USD"] -= (quantity * price);
+  //swap 
+  user1.balances[TICKER] -= quantity; //decrease the quantiy of stock for first user
+  user2.balances[TICKER] += quantity; //add for second user
+  user1.balances["USD"] += (quantity * price); //added to first user
+  user2.balances["USD"] -= (quantity * price); //removed from second user
 }
 
 function fillOrders(side: string, price: number, quantity: number, userId: string): number {
@@ -186,7 +187,7 @@ function fillOrders(side: string, price: number, quantity: number, userId: strin
       } else {
         remainingQuantity -= asks[i].quantity;
         flipBalance(asks[i].userId, userId, asks[i].quantity, asks[i].price);
-        asks.pop();
+        asks.pop(); //remove the order from the order book because the ask is filled
       }
     }
   } else {
