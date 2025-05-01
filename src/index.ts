@@ -125,7 +125,6 @@ app.get("/balance/:userId", (req, res) => {
 })
 
 app.get("/quote", (req, res) => {
-  // TODO: Assignment
   const side = req.body.side;
   const quantity = req.body.quantity;
   let total_price = 0;
