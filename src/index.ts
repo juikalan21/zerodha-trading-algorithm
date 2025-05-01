@@ -47,10 +47,9 @@ app.post("/order", (req: any, res: any) => {
   const userId: string = req.body.userId; //in real world we will get userId from the cookie session or JWT token
 
   //when an order comes in, i first need to check can this order be filled in the existing order book and get back the remaining quantity
-  // yes
   const remainingQty = fillOrders(side, price, quantity, userId);
 
-  if (remainingQty === 0) {
+  if (remainingQty === 0) { //order has been filled
     res.json({ filledQuantity: quantity });
     return;
   }
@@ -76,6 +75,7 @@ app.post("/order", (req: any, res: any) => {
   })
 })
 
+//needs to return the current order book - cumilating the orders
 app.get("/depth", (req: any, res: any) => {
   const depth: {
     [price: string]: {
@@ -91,7 +91,7 @@ app.get("/depth", (req: any, res: any) => {
         type: "bid"
       };
     } else {
-      depth[bids[i].price].quantity += bids[i].quantity;
+      depth[bids[i].price].quantity += bids[i].quantity; //if the price is already in the order book, we just add the quantity to it
     }
   }
 
@@ -111,6 +111,7 @@ app.get("/depth", (req: any, res: any) => {
   })
 })
 
+//how much balances the user has - both USD and ticker - google stock here
 app.get("/balance/:userId", (req, res) => {
   const userId = req.params.userId;
   const user = users.find(x => x.id === userId);
@@ -120,11 +121,43 @@ app.get("/balance/:userId", (req, res) => {
       [TICKER]: 0
     })
   }
-  res.json({ balances: user.balances });
+  res.json({ balances: user.balances }); //return the balance of user
 })
 
 app.get("/quote", (req, res) => {
   // TODO: Assignment
+  const side = req.body.side;
+  const quantity = req.body.quantity;
+  let total_price = 0;
+  let curr_quantity = quantity;
+
+  if (side === "bid") {
+    for (let i = 0; i < asks.length; i++) {
+      if (asks[i].quantity >= curr_quantity) {
+        total_price += asks[i].price * curr_quantity;
+        curr_quantity = 0;
+        break;
+      } else {
+        total_price += asks[i].price * asks[i].quantity;
+        curr_quantity -= asks[i].quantity;
+      }
+    }
+  } else if (side === "ask") {
+    for (let i = 0; i < bids.length; i++) {
+      if (bids[i].quantity >= curr_quantity) {
+        total_price += bids[i].price * curr_quantity;
+        curr_quantity = 0;
+        break;
+      } else {
+        total_price += bids[i].price * bids[i].quantity;
+        curr_quantity -= bids[i].quantity;
+      }
+    }
+  }
+
+  const quote = total_price / quantity;
+
+  res.json({ quote });
 });
 
 function flipBalance(userId1: string, userId2: string, quantity: number, price: number) {
@@ -142,6 +175,7 @@ function flipBalance(userId1: string, userId2: string, quantity: number, price: 
 function fillOrders(side: string, price: number, quantity: number, userId: string): number {
   let remainingQuantity = quantity;
   if (side === "bid") {
+    //when someone places a bid order, we need to check if there are any asks that can be filled at the price - matching with asks - returning the remaining quantity
     for (let i = asks.length - 1; i >= 0; i--) {
       if (asks[i].price > price) {
         continue;
